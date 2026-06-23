@@ -179,17 +179,62 @@ def normalise_url(url):
     return url
 
 
+# Company keywords to filter out (checked against slug + extracted name)
+COMPANY_KEYWORDS = [
+    'pt ', 'pt.', 'cv ', 'cv.', 'tbk', 'persero', 'group', 'community',
+    'jobs', 'job', 'career', 'hiring', 'vacancy', 'recruitment',
+    'indojob', 'jobstreet', 'kalibrr', 'glint', 'topcompany',
+    'hotel', 'restaurant', 'cafe', 'industri', 'manufacturing',
+    'consulting', 'technologies', 'solutions', 'services', 'digital',
+    'media', 'agency', 'studio', 'academy', 'school', 'course',
+    'training', 'institute', 'foundation', 'associat', 'partners',
+    'ltd', 'inc', 'corp', 'co ', 'llc', 'plc',
+    'openkerja', 'kerja', 'loker', 'lowongan', 'rekrutmen',
+    'apartment', 'rumah sakit', 'klinik', 'bank', 'insurance',
+    'property', 'real estate', 'travel', 'tour', 'logistic',
+    'trading', 'forex', 'crypto exchange', 'marketplace',
+    'farming', 'grup', 'perusahaan', 'perseroan',
+]
+
+# Generic slugs to skip
+SKIP_SLUGS = ['open-to-work', 'welcom', 'welcome', 'jobs', 'career']
+
+# Known company patterns in slugs (1-word or very short = suspicious)
+COMPANY_SLUG_PATTERNS = [
+    r'^[a-z]+$',           # single word like "openkerja", "enso"
+    r'^(pt|cv|tbk|inc|ltd|llc|co)[-\s]',  # starts with company prefix
+    r'(group|inc|ltd|llc|corp|co|tbk|pt|cv)$',  # ends with company suffix
+]
+
+
+def is_company_name(name):
+    """Check if extracted name looks like a company."""
+    name_lower = name.lower().strip()
+    for kw in COMPANY_KEYWORDS:
+        if kw in name_lower:
+            return True
+    words = name.split()
+    if len(words) <= 1 and len(name) < 15:
+        return True
+    if len(words) >= 5:
+        return True
+    return False
+
+
 def filter_profile(url):
     """Check if URL is a valid individual profile."""
-    # Must be linkedin.com/in/
     if not re.match(r'https?://(?:www\.|id\.)?linkedin\.com/in/', url):
         return False
     slug = url.rstrip('/').split('/')[-1].lower()
-    # Skip generic slugs
     if any(s in slug for s in SKIP_SLUGS):
         return False
-    # Skip if slug is too short
     if len(slug) < 3:
+        return False
+    for pattern in COMPANY_SLUG_PATTERNS:
+        if re.search(pattern, slug):
+            return False
+    name = extract_name_from_url(url)
+    if is_company_name(name):
         return False
     return True
 

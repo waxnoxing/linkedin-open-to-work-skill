@@ -1,59 +1,35 @@
+---
+name: linkedin-open-to-work
+description: "Fresh-on-demand LinkedIn profile search (Indonesia, Open to Work, individual only). Multi-engine search + 5-layer company filter + city-univ matching + AMD JSON pipeline."
+---
+
 # LinkedIn Open to Work — Fresh Search (Indonesia, Individual Only)
 
 Setiap diminta, search **langsung fresh** dari search engines. Tidak pakai cache lama.
+
+## ⚡ Quick Action (Default)
+
+Ketika user minta "N linkedin lengkap" → execute immediately (see `references/workflow-fresh-search.md`):
+
+```bash
+python3 ~/.hermes/skills/social-media/amd-register-sugab/scripts/amd_register_json.py N --domain ubsi.biz.id
+```
+Then ZIP + `hermes send -t telegram "MEDIA:/tmp/linkedin-N.zip"`
+
+**Default:** domain `ubsi.biz.id`, individual only, fresh search, no confirmation needed.
 
 ## Cara Pakai
 
 ### Search + Get Profiles
 ```bash
-# Search fresh + get profiles
 python3 ~/.hermes/skills/social-media/linkedin-open-to-work/scripts/combo_unique.py 10
-
-# Search fresh terus (skip cache)
 python3 ~/.hermes/skills/social-media/linkedin-open-to-work/scripts/combo_unique.py 10 --force-search
-
-# JSON output (buat AMD pipeline)
 python3 ~/.hermes/skills/social-media/linkedin-open-to-work/scripts/combo_unique.py 5 --json
-
----
-
-## ⚡ Quick Action (Default)
-
-Ketika user minta "N linkedin lengkap":
-
-1. Search fresh + generate JSON:
-```bash
-python3 ~/.hermes/skills/social-media/amd-register-sugab/scripts/amd_register_json.py N --domain ubsi.biz.id
-```
-2. ZIP + kirim file:
-```bash
-python3 -c "
-import zipfile, glob, os
-src = '$HOME/.hermes/skills/social-media/amd-register-sugab'
-zipf = '/tmp/linkedin-N.zip'
-with zipfile.ZipFile(zipf, 'w', zipfile.ZIP_DEFLATED) as z:
-    for f in glob.glob(f'{src}/amd-register-*.json'):
-        z.write(f, os.path.basename(f))
-for f in glob.glob(f'{src}/amd-register-*.json'):
-    os.remove(f)
-print(zipf)
-"
-```
-3. `hermes send -t telegram "N linkedin JSON MEDIA:/tmp/linkedin-N.zip"`
-
-**Default:** domain `ubsi.biz.id`, individual only, fresh search.
 ```
 
 ### AMD Registration JSON
 ```bash
-# Generate 1 JSON
-python3 ~/.hermes/skills/social-media/amd-register-sugab/scripts/amd_register_json.py
-
-# Generate N JSON
-python3 ~/.hermes/skills/social-media/amd-register-sugab/scripts/amd_register_json.py 5
-
-# Custom domain + password
-python3 ~/.hermes/skills/social-media/amd-register-sugab/scripts/amd_register_json.py 3 --domain ubsi.biz.id --password "MyPass!1"
+python3 ~/.hermes/skills/social-media/amd-register-sugab/scripts/amd_register_json.py N --domain ubsi.biz.id
 ```
 
 ### Manual Search Refresh
@@ -61,18 +37,15 @@ python3 ~/.hermes/skills/social-media/amd-register-sugab/scripts/amd_register_js
 python3 ~/.hermes/skills/social-media/linkedin-open-to-work/scripts/search_li.py --refresh --count 50
 ```
 
-## Filter: Individual Only
+## Filter: Individual Only (5-Layer)
 
-- ❌ Perusahaan (PT, CV, Group, Community)
-- ❌ Recruiting/Hiring pages
-- ❌ Job listing sites (Jobstreet, Kalibrr, Glints)
-- ✅ Individual profiles only
-
-Query pool otomatis exclude kata kunci perusahaan.
+1. **Query-level**: `-company -pt -cv -perusahaan` di semua query
+2. **Slug pattern**: reject single-word, starts/ends with company suffix (ltd, inc, corp, group, tbk, pt, cv)
+3. **Extracted name check**: 60+ keywords (hotel, restaurant, consulting, agency, bank, insurance, trading, farming, etc.)
+4. **Word count**: reject 1-word names (<15 char) or 5+ word names
+5. **Generic slugs**: open-to-work, welcome, jobs, career
 
 ## City → University Matching
-
-City dari address → universitas di kota yang sama.
 
 | City | Universities |
 |------|-------------|
@@ -86,22 +59,6 @@ City dari address → universitas di kota yang sama.
 | Medan | USU, Unimed, UMSU |
 | Lhokseumawe | UNIMAL |
 
-## Output Format
-
-```
-Name       : Andi Bulan Rahma Nabila
-LinkedIn   : https://www.linkedin.com/in/andi-bulan-rahma-nabila-5a5926298
-Email      : andibulanrahmanabila@sugabdemy.app
-City       : Depok
-Province   : Jawa Barat
-University : Universitas Gunadaram
-Address 1  : Jl. Raya Bogor Km. 30
-Address 2  : Depok
-Zip        : 16518
-Phone      : 628477428449
-Alasan     : As a student learning AI development...
-```
-
 ## Email Format
 `firstnamelastname@ubsi.biz.id` — lowercase, no dots, concatenated
 
@@ -111,11 +68,13 @@ Alasan     : As a student learning AI development...
 ├── scripts/
 │   ├── search_li.py        # multi-engine search
 │   └── combo_unique.py     # search + dedup + format
-└── data/
-    ├── address.txt         # Indonesian addresses
-    ├── cities_univ.json    # city → university mapping
-    ├── linkedin_cache.json # auto-generated
-    └── sent_profiles.json  # auto-generated
+├── data/
+│   ├── address.txt         # Indonesian addresses
+│   ├── cities_univ.json    # city → university mapping
+│   ├── linkedin_cache.json # auto-generated
+│   └── sent_profiles.json  # auto-generated
+└── references/
+    └── workflow-fresh-search.md
 
 ~/.hermes/skills/social-media/amd-register-sugab/
 ├── scripts/
@@ -125,12 +84,11 @@ Alasan     : As a student learning AI development...
 ```
 
 ## Dedup
-- `sent_profiles.json` — pernah dikirim via combo
-- `sent_amd_profiles.json` — pernah dikirim via AMD JSON
-- Keduanya di-check sebelum output
+- `sent_profiles.json` — combo output tracking
+- `sent_amd_profiles.json` — AMD JSON output tracking
 
 ## Search Engines (fallback)
-1. DuckDuckGO Lite (most reliable on AWS IP)
+1. DuckDuckGo Lite (most reliable on AWS IP)
 2. Yahoo
 3. Bing
 4. Brave
