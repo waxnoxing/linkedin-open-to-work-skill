@@ -1,0 +1,25 @@
+# Address database for Indonesia
+# Format: Address1|Address2|City|Province|Zip
+Jl. Sudirman No. 1|Kel. Kebayoran Baru|Jakarta|DKI Jakarta|10220
+Jl. Gatot Subroto No. 8|Menteng|Jakarta|DKI Jakarta|10310
+Jl. MH Thamrin No. 10|Thamrin|Jakarta|DKI Jakarta|10230
+Jl. Asia Afrika No. 45|Bandung|Bandung|Jawa Barat|40111
+Jl. Cihampelas No. 120|Bandung|Bandung|Jawa Barat|40115
+Jl. Veteran No. 15|Malang|Malang|Jawa Timur|65145
+Jl. Soekarno Hatta No. 200|Malang|Malang|Jawa Timur|65112
+Jl. Pemuda No. 27|Semarang|Semarang|Jawa Tengah|50132
+Jl. Pandanaran No. 32|Semarang|Semarang|Jawa Tengah|50141
+Jl. Airlangga No. 4|Surabaya|Surabaya|Jawa Timur|60286
+Jl. Pemuda No. 33|Surabaya|Surabaya|Jawa Timur|60271
+Jl. Urip Sumoharjo No. 12|Yogyakarta|Yogyakarta|DI Yogyakarta|55221
+Jl. Affandi No. 5|Yogyakarta|Yogyakarta|DI Yogyakarta|55281
+Jl. Margonda Raya No. 28|Depok|Depok|Jawa Barat|16424
+Jl. Raya Bogor Km. 30|Depok|Depok|Jawa Barat|16518
+Jl. Teuku Umar No. 17|Lhokseumawe|Lhokseumawe|Aceh|24351
+Jl. Merdeka No. 42|Medan|Medan|Sumatera Utara|20151
+Jl. Diponegoro No. 53|Balikpapan|Balikpapan|Kalimantan Timur|76114
+Jl. Ahmad Yani No. 100|Makassar|Makassar|Sulawesi Selatan|90111
+Jl. Sudirman No. 66|Palembang|Palembang|Sumatera Selatan|30129
+Jl. Imam Bonjol No. 8|Pekanbaru|Pekanbaru|Riau|28111
+Jl. Jenderal Sudirman No. 5|Banjarmasin|Banjarmasin|Kalimantan Selatan|70117
+Jl. Pahlawan No. 66|Manado|Manado|Sulawesi Utara|95116

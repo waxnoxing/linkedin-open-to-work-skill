@@ -1,0 +1,14 @@
+*.pyc
+__pycache__/
+.env
+.env.*
+
+# Keep data files tracked (address.txt, cities_univ.json, gpu_use_cases.json)
+#linkedin_cache.json
+#sent_profiles.json
+#sent_amd_profiles.json
+# Runtime data (don't commit)
+linkedin_cache.json
+sent_profiles.json
+sent_amd_profiles.json
+amd-register-*.json
