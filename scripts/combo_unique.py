@@ -232,6 +232,13 @@ def main():
                 "profiles": [{
                     "name": "AMD Create Account",
                     "urlPattern": "amd.com",
+                    "inputs": [
+                        {"key": "location", "label": "Location / Country"},
+                        {"key": "jobFunction", "label": "Job Function"},
+                        {"key": "productNeeded", "label": "Product Needed"},
+                        {"key": "affiliationType", "label": "Affiliation Type"},
+                        {"key": "howToUse", "label": "How do you plan to use", "default": p['gpu_case']}
+                    ],
                     "steps": [
                         {
                             "name": "Langkah 1 – Buat Akun",
@@ -240,11 +247,10 @@ def main():
                                 {"label": "Last Name", "value": p['last_name']},
                                 {"label": "E-mail", "value": p['email']},
                                 {"label": "Preferred Language", "value": "English"},
-                                {"label": "Location", "value": "Indonesia"},
                             ]
                         },
                         {
-                            "name": "Langkah 2 – Aktivasi",
+                            "name": "Langkah 2 – Aktivasi (pakai Access Token)",
                             "fields": [
                                 {"label": "Access Token", "value": "[[token]]"},
                                 {"label": "Password", "value": password},
@@ -252,22 +258,24 @@ def main():
                             ]
                         },
                         {
-                            "name": "Langkah 3 – Profil & Credit Request",
+                            "name": "Langkah 3 – Lengkapi Profil",
                             "fields": [
+                                {"label": "First Name", "value": p['first_name']},
+                                {"label": "Last Name", "value": p['last_name']},
+                                {"label": "E-mail", "value": p['email']},
                                 {"label": "Company Name", "value": p['university']},
                                 {"label": "Address 1", "value": p['address1']},
                                 {"label": "Address 2", "value": p['address2']},
+                                {"label": "Location / Country", "value": "Indonesia"},
                                 {"label": "City", "value": p['city']},
                                 {"label": "State/Province", "value": p['province']},
                                 {"label": "Postal Code", "value": p['zip']},
                                 {"label": "Phone", "value": p['phone']},
-                                {"label": "How did you hear about us?", "value": "Social Media"},
-                                {"label": "Job Function", "value": "[[jobFunction]]"},
-                                {"label": "Tell Us About your AMD Interests", "value": p['gpu_case']},
-                                {"label": "Product Needed", "value": "[[productNeeded]]"},
-                                {"label": "Affiliation Type", "value": "[[affiliationType]]"},
-                                {"label": "Profile URL", "value": p['url']},
-                                {"label": "Company Website", "value": ""},
+                                {"label": "Job Function", "value": "Student"},
+                                {"label": "Product Needed", "value": "AMD Dev Cloud"},
+                                {"label": "Affiliation Type", "value": "Student"},
+                                {"label": "How do you plan to use", "value": p['gpu_case']},
+                                {"label": "Profile 1", "value": p['url']},
                             ]
                         }
                     ]
