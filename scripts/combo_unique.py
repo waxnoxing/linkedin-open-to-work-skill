@@ -164,6 +164,10 @@ def main():
     count = 5
     force_search = '--force-search' in args
     json_output = '--json' in args
+    amd_json = '--amd-json' in args or '--json-send' in args
+    domain = 'ubsi.biz.id'
+    password = 'PasswordKuat!1'
+    is_send = '--json-send' in args
 
     # Parse count
     for a in args:
@@ -175,6 +179,14 @@ def main():
         try:
             idx = args.index('--count')
             count = int(args[idx + 1])
+        except:
+            pass
+
+    # Parse domain
+    if '--domain' in args:
+        try:
+            idx = args.index('--domain')
+            domain = args[idx + 1]
         except:
             pass
 
@@ -209,13 +221,87 @@ def main():
     # Output
     if json_output:
         print(json.dumps(results, indent=2, ensure_ascii=False))
+    elif amd_json:
+        # Generate AMD JSON files
+        amd_dir = Path.home() / ".hermes/skills/social-media/amd-register-sugab"
+        for i, p in enumerate(results, 1):
+            safe_name = re.sub(r'[^a-zA-Z0-9]', '_', p['name'])
+            filename = f"amd-register-{safe_name}.json"
+            
+            amd_json_data = {
+                "profiles": [{
+                    "name": "AMD Create Account",
+                    "urlPattern": "amd.com",
+                    "steps": [
+                        {
+                            "name": "Langkah 1 – Buat Akun",
+                            "fields": [
+                                {"label": "First Name", "value": p['first_name']},
+                                {"label": "Last Name", "value": p['last_name']},
+                                {"label": "E-mail", "value": p['email']},
+                                {"label": "Preferred Language", "value": "English"},
+                                {"label": "Location", "value": "Indonesia"},
+                            ]
+                        },
+                        {
+                            "name": "Langkah 2 – Aktivasi",
+                            "fields": [
+                                {"label": "Access Token", "value": "[[token]]"},
+                                {"label": "Password", "value": password},
+                                {"label": "Confirm Password", "value": password},
+                            ]
+                        },
+                        {
+                            "name": "Langkah 3 – Profil & Credit Request",
+                            "fields": [
+                                {"label": "Company Name", "value": p['university']},
+                                {"label": "Address 1", "value": p['address1']},
+                                {"label": "Address 2", "value": p['address2']},
+                                {"label": "City", "value": p['city']},
+                                {"label": "State/Province", "value": p['province']},
+                                {"label": "Postal Code", "value": p['zip']},
+                                {"label": "Phone", "value": p['phone']},
+                                {"label": "How did you hear about us?", "value": "Social Media"},
+                                {"label": "Job Function", "value": "[[jobFunction]]"},
+                                {"label": "Tell Us About your AMD Interests", "value": p['gpu_case']},
+                                {"label": "Product Needed", "value": "[[productNeeded]]"},
+                                {"label": "Affiliation Type", "value": "[[affiliationType]]"},
+                                {"label": "Profile URL", "value": p['url']},
+                                {"label": "Company Website", "value": ""},
+                            ]
+                        }
+                    ]
+                }]
+            }
+            
+            with open(amd_dir / filename, 'w') as f:
+                json.dump(amd_json_data, f, indent=2, ensure_ascii=False)
+            print(f"Generated: {filename} ({p['name']})")
+        
+        # Update AMD sent tracking
+        amd_sent_file = amd_dir / "data" / "sent_amd_profiles.json"
+        amd_sent = []
+        if amd_sent_file.exists():
+            amd_sent = json.load(open(amd_sent_file))
+        for p in results:
+            amd_sent.append({
+                'name': p['name'],
+                'url': p['url'],
+                'sent_at': datetime.now().isoformat()
+            })
+        amd_sent_file.parent.mkdir(parents=True, exist_ok=True)
+        json.dump(amd_sent, open(amd_sent_file, 'w'), indent=2)
+        
+        print(f"\n[combo_unique] {len(results)} AMD JSON files generated.")
+
     else:
         for p in results:
             print_profile(p)
 
     # Mark sent
     mark_sent([{'name': p['name'], 'url': p['url']} for p in results])
-    print(f"[combo_unique] Sent {len(results)} profiles, marked as used.")
+    if not is_send:
+        print(f"[combo_unique] Sent {len(results)} profiles, marked as used.")
 
 
 if __name__ == '__main__':

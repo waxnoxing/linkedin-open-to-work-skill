@@ -9,12 +9,22 @@ Setiap diminta, search **langsung fresh** dari search engines. Tidak pakai cache
 
 ## ⚡ Quick Action (Default)
 
-Ketika user minta "N linkedin lengkap" → execute immediately (see `references/workflow-fresh-search.md`):
+Ketika user minta "N linkedin lengkap" → execute immediately:
 
 ```bash
-python3 ~/.hermes/skills/social-media/amd-register-sugab/scripts/amd_register_json.py N --domain ubsi.biz.id
+# 1. Search fresh + generate JSON (cocok langsung, dari batch yg sama)
+python3 ~/.hermes/skills/social-media/linkedin-open-to-work/scripts/combo_unique.py N --amd-json --domain ubsi.biz.id --force-search
+
+# 2. ZIP + send
+python3 -c "
+import zipfile, glob, os
+with zipfile.ZipFile('/tmp/linkedin.zip', 'w', zipfile.ZIP_DEFLATED) as z:
+    for f in glob.glob(os.path.expanduser('~/.hermes/skills/social-media/amd-register-sugab/amd-register-*.json')):
+        z.write(f, os.path.basename(f))
+        os.remove(f)
+"
+hermes send -t telegram "N linkedin JSON MEDIA:/tmp/linkedin.zip"
 ```
-Then ZIP + `hermes send -t telegram "MEDIA:/tmp/linkedin-N.zip"`
 
 **Default:** domain `ubsi.biz.id`, individual only, fresh search, no confirmation needed.
 
