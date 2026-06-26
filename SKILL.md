@@ -37,13 +37,13 @@ python3 ~/.hermes/skills/social-media/linkedin-open-to-work/scripts/combo_unique
 ### ⚠️ Pitfalls
 
 ### Password Masking in execute_code
-When generating AMD JSON files inside `execute_code`, password strings like `PASSWORD="B@gusdwijanarko4"` get masked by the system. If your code uses the masked literal value, JSON files end up with password="***" (3 asterisks).
+When generating AMD JSON files inside `execute_code`, password strings get masked by the system. If your code uses the masked literal value, JSON files end up with password="***" (3 asterisks).
 
 **Fix:** Always generate JSON with passwords via `terminal` heredoc, NOT inside `execute_code` dicts:
 ```bash
 python3 << 'PYEOF'
 import json
-PWD = "B@gusdwijanarko4"  # never gets masked in terminal heredoc
+PWD = "PasswordKuat!1"  # never gets masked in terminal heredoc
 data = {"steps": [{"fields": [{"label": "Password", "value": PWD}]}]}
 json.dump(data, open("file.json", 'w'))
 PYEOF

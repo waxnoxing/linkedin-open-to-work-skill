@@ -40,7 +40,7 @@ GPU use case (random from 25) → AMD JSON (1 file/profil) → ZIP → Telegram
 ```bash
 # Search fresh via CloakBrowser → dedup → JSON → ZIP → send
 # Domain random: ubsi.biz.id / gmailedu.web.id
-# Password: B@gusdwijanarko4
+# Password: PasswordKuat!1
 ```
 
 ## Dependencies
