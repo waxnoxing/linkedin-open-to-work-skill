@@ -190,21 +190,15 @@ def main():
         except:
             pass
 
-    # Force search if needed
-    if force_search:
-        print(f"[combo_unique] Force searching {count * 3} profiles...")
-        do_refresh(target_count=max(count * 3, 30))
+    # Always search fresh — no stock/cache-first
+    print(f"[combo_unique] Searching fresh profiles...")
+    do_refresh(target_count=max(count * 3, 30))
 
-    # Get fresh profiles
+    # Get fresh profiles (exclude already sent)
     profiles = get_fresh_profiles(count=count, exclude_sent=True)
 
     if not profiles:
-        print("[combo_unique] No profiles in cache, searching...")
-        do_refresh(target_count=max(count * 3, 30))
-        profiles = get_fresh_profiles(count=count, exclude_sent=True)
-
-    if not profiles:
-        print("[combo_unique] Still no profiles. All engines may be blocked.")
+        print("[combo_unique] Still no fresh profiles found.")
         sys.exit(1)
 
     # Load data

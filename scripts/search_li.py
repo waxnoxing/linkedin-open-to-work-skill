@@ -20,6 +20,7 @@ from pathlib import Path
 DATA_DIR = Path.home() / ".hermes/skills/social-media/linkedin-open-to-work/data"
 CACHE_FILE = DATA_DIR / "linkedin_cache.json"
 SENT_FILE = DATA_DIR / "sent_profiles.json"
+AMD_SENT_FILE = Path.home() / ".hermes/skills/social-media/amd-register-sugab/data/sent_amd_profiles.json"
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 
@@ -322,11 +323,19 @@ def do_refresh(target_count=50, verbose=True):
 
 
 def get_sent_urls():
-    """Load sent profiles."""
-    if SENT_FILE.exists():
-        sent = json.load(open(SENT_FILE))
-        return {normalise_url(p.get('url', '')) for p in sent}
-    return set()
+    """Load sent profiles from both LI and AMD trackers."""
+    sent = set()
+    for f in [SENT_FILE, AMD_SENT_FILE]:
+        if f.exists():
+            data = json.load(open(f))
+            for p in data:
+                url = p.get('url', '')
+                if url:
+                    sent.add(normalise_url(url))
+                name = p.get('name', '')
+                if name:
+                    sent.add(name.lower().strip())
+    return sent
 
 
 def get_fresh_profiles(count=10, exclude_sent=True):

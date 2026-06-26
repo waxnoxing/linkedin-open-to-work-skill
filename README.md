@@ -1,90 +1,53 @@
-# LinkedIn Open to Work Skill
+# LinkedIn Open to Work Skill → AMD JSON Pipeline
 
-Multi-engine LinkedIn profile search (Indonesia, Open to Work, individual only) → AMD registration JSON generator.
+**Fresh-on-demand** LinkedIn profile search (Indonesia, Open to Work, **individual only**) → city-matched university → 25 AMD-friendly use cases → AMD registration JSON generator.
 
-## Quick Start
+## Pipeline
+
+```
+Search (CloakBrowser Google dork) → Dedup (sent_profiles × 2) → City-Univ match → 
+GPU use case (random from 25) → AMD JSON (1 file/profil) → ZIP → Telegram
+```
+
+## Files
+
+```
+├── SKILL.md                     # Hermes skill — agent instructions
+├── scripts/
+│   ├── search_li.py             # Multi-engine search + company filter
+│   └── combo_unique.py          # Search → dedup → format + AMD JSON
+├── amd-register-sugab-scripts/
+│   └── amd_register_json.py     # Standalone AMD JSON generator
+├── data/
+│   ├── address.txt              # Indonesian addresses (pipe-separated)
+│   ├── cities_univ.json         # City → university mapping
+│   ├── gpu_use_cases.json       # 25 AMD-friendly use case texts
+│   ├── linkedin_cache.json      # Auto-generated search cache
+│   └── sent_profiles.json       # Auto-generated sent tracking
+```
+
+## Key Features
+
+- **Individual-only filter** — 5-layer company/recruiter rejection
+- **City-matched university** — Depok→UI/Gunadarma, Surabaya→Airlangga, etc.
+- **25 AMD-approval-optimized use cases** — all education/research focused
+- **Dual domain support** — `ubsi.biz.id` & `gmailedu.web.id`, random selection
+- **Zero stock** — fresh search every request
+- **Dedup against BOTH** LI sent + AMD sent tracking
+
+## Usage (Hermes agent)
 
 ```bash
-# 1. Install dependencies (Python 3.11+, no external deps)
-# All stdlib only: subprocess, json, re, random, pathlib, datetime
-
-# 2. Generate N fresh LinkedIn profiles + AMD JSON
-python3 scripts/amd_register_json.py 10 --domain ubsi.biz.id
-
-# 3. ZIP results
-python3 -c "
-import zipfile, glob, os
-src = '.'
-zipf = '/tmp/linkedin-json.zip'
-with zipfile.ZipFile(zipf, 'w', zipfile.ZIP_DEFLATED) as z:
-    for f in glob.glob(f'{src}/amd-register-*.json'):
-        z.write(f, os.path.basename(f))
-for f in glob.glob(f'{src}/amd-register-*.json'):
-    os.remove(f)
-print(zipf)
-"
-
-# 4. Send via Telegram (Hermes)
-hermes send -t telegram "10 linkedin JSON MEDIA:/tmp/linkedin-json.zip"
+# Search fresh via CloakBrowser → dedup → JSON → ZIP → send
+# Domain random: ubsi.biz.id / gmailedu.web.id
+# Password: B@gusdwijanarko4
 ```
 
-## Directory Structure
+## Dependencies
 
-```
-linkedin-open-to-work-skill/
-├── SKILL.md                    # Main skill documentation
-├── scripts/
-│   ├── search_li.py            # Multi-engine search (DDG, Yahoo, Bing, Brave)
-│   ├── combo_unique.py         # Search + dedup + city-univ matching
-│   └── amd_register_json.py    # AMD registration JSON generator
-├── data/
-│   ├── address.txt             # Indonesian addresses (pipe-delimited)
-│   ├── cities_univ.json        # City → university mapping
-│   ├── linkedin_cache.json     # Auto-generated search cache
-│   └── sent_profiles.json      # Dedup tracking
-└── amd-register-sugab-scripts/
-    └── amd_register_json.py    # Standalone AMD JSON generator
-```
+Python 3.11+ stdlib only (json, subprocess, re, random, pathlib, datetime).
+No pip install needed. CloakBrowser for search (anti-detection Chromium).
 
-## Search Engines (Fallback Chain)
+## Repo
 
-1. **DuckDuckGo Lite** — most reliable on AWS IP
-2. **Yahoo** — via curl
-3. **Bing** — via curl
-4. **Brave** — via curl
-
-## Filter: Individual Only
-
-- ❌ Companies (PT, CV, Group, Community)
-- ❌ Recruiting/Hiring pages
-- ❌ Job listing sites
-- ✅ Individual profiles only
-
-## City → University Matching
-
-City from address → university in same city. 17+ Indonesian cities mapped.
-
-## Email Format
-
-`firstnamelastname@ubsi.biz.id` — lowercase, no dots, concatenated
-
-## GPU Use Cases
-
-10 templates, all "AI agent + school + grades" theme, English. Randomly assigned.
-
-## Dedup
-
-- `sent_profiles.json` — combo output tracking
-- `sent_amd_profiles.json` — AMD JSON output tracking
-- Both checked before output
-
-## Integration with Hermes
-
-When user asks for "N linkedin lengkap":
-1. Run `amd_register_json.py N --domain <domain>`
-2. ZIP results
-3. `hermes send -t telegram "MEDIA:/tmp/file.zip"`
-
-## License
-
-MIT
+https://github.com/waxnoxing/linkedin-open-to-work-skill
