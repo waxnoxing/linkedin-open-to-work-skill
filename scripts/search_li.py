@@ -24,8 +24,8 @@ AMD_SENT_FILE = Path.home() / ".hermes/skills/social-media/amd-register-sugab/da
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 
-# 10 dork queries — shuffled each run
-QUERIES = [
+# Default queries for Indonesia
+DEFAULT_QUERIES = [
     'site:linkedin.com/in "Open to Work" Indonesia "Lokasi:" -Australia -Singapore -Malaysia',
     'site:linkedin.com/in "Open to Work" "Indonesia" "fresh graduate" -company -pt -CV',
     'site:linkedin.com/in "Open to Work" Indonesia mahasiswa -company -pt',
@@ -37,6 +37,27 @@ QUERIES = [
     'site:linkedin.com/in "Open to Work" Indonesia "software engineer" -company -pt',
     'site:linkedin.com/in "Open to Work" Indonesia "freshgraduate" -company -pt',
 ]
+
+# Country-agnostic queries (replace COUNTRY placeholder)
+COUNTRY_QUERIES = [
+    'site:linkedin.com/in "Open to Work" COUNTRY',
+    'site:linkedin.com/in "Open to Work" COUNTRY "fresh"',
+    'site:linkedin.com/in "Open to Work" COUNTRY "student"',
+    'site:linkedin.com/in "Open to Work" COUNTRY "looking"',
+    'site:linkedin.com/in "Open to Work" COUNTRY graduate',
+    'site:linkedin.com/in "Open to Work" COUNTRY "available"',
+    'site:linkedin.com/in "Open to Work" COUNTRY "software"',
+    'site:linkedin.com/in "Open to Work" COUNTRY "data"',
+    'site:linkedin.com/in "Open to Work" COUNTRY "engineer"',
+    'site:linkedin.com/in "Open to Work" COUNTRY "university"',
+]
+
+
+def get_queries(country):
+    """Get queries for a specific country."""
+    if country == "Indonesia":
+        return DEFAULT_QUERIES
+    return [q.replace("COUNTRY", country) for q in COUNTRY_QUERIES]
 
 # Company keywords to filter out
 COMPANY_KEYWORDS = [
@@ -240,7 +261,7 @@ def filter_profile(url):
     return True
 
 
-def do_refresh(target_count=50, verbose=True):
+def do_refresh(target_count=50, verbose=True, country="Indonesia"):
     """Main refresh function — search engines → cache."""
     # Load existing cache
     if CACHE_FILE.exists():
@@ -251,13 +272,13 @@ def do_refresh(target_count=50, verbose=True):
     existing_urls = {normalise_url(p.get('url', '')) for p in cache}
     new_profiles = []
 
-    # Shuffle queries, pick subset
-    queries = QUERIES.copy()
+    # Get country-specific queries
+    queries = get_queries(country)
     random.shuffle(queries)
     selected_queries = queries[:min(5, len(queries))]
 
     if verbose:
-        print(f"[search_li] Refresh: target={target_count}, cache={len(cache)}, queries={len(selected_queries)}")
+        print(f"[search_li] Refresh: target={target_count}, cache={len(cache)}, queries={len(selected_queries)}, country={country}")
 
     engines = [
         ('DDG', search_ddg),
@@ -338,10 +359,10 @@ def get_sent_urls():
     return sent
 
 
-def get_fresh_profiles(count=10, exclude_sent=True):
+def get_fresh_profiles(count=10, exclude_sent=True, country="Indonesia"):
     """Get N fresh profiles from cache, excluding sent."""
     if not CACHE_FILE.exists():
-        do_refresh(target_count=max(count * 3, 30))
+        do_refresh(target_count=max(count * 3, 30), country=country)
 
     cache = json.load(open(CACHE_FILE)) if CACHE_FILE.exists() else []
 
@@ -370,11 +391,23 @@ def mark_sent(profiles):
 
 if __name__ == '__main__':
     args = sys.argv[1:]
+    country = "Indonesia"
+
+    # Parse --country
+    if '--country' in args:
+        try:
+            idx = args.index('--country')
+            country = args[idx + 1]
+            # Remove from args to avoid confusion with other flags
+            del args[idx:idx+2]
+        except:
+            pass
 
     if '--list-sources' in args:
         print("Engines: DDG (primary), Yahoo, Bing, Brave")
-        print(f"Queries ({len(QUERIES)}):")
-        for i, q in enumerate(QUERIES):
+        qs = get_queries(country)
+        print(f"Queries ({len(qs)}) for {country}:")
+        for i, q in enumerate(qs):
             print(f"  {i+1}. {q}")
         sys.exit(0)
 
@@ -386,10 +419,10 @@ if __name__ == '__main__':
                 count = int(args[idx + 1])
             except:
                 pass
-        do_refresh(target_count=count)
+        do_refresh(target_count=count, country=country)
     else:
         # Default: get fresh profiles
         count = 10
-        profiles = get_fresh_profiles(count=count)
+        profiles = get_fresh_profiles(count=count, country=country)
         for p in profiles:
             print(f"{p['name']} | {p['url']}")

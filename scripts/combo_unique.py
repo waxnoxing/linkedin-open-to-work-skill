@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""
-combo_unique.py — Get fresh LinkedIn profiles (Open to Work, individual, Indonesia)
+"""combo_unique.py — Get fresh LinkedIn profiles (Open to Work, individual, multi-country)
 
 Usage:
-  python3 combo_unique.py              # get 5 profiles
-  python3 combo_unique.py [count]      # get N profiles
-  python3 combo_unique.py 10 --force-search  # force fresh search first
-  python3 combo_unique.py 5 --json     # JSON output for AMD pipeline
+  python3 combo_unique.py                        # 5 profiles Indonesia
+  python3 combo_unique.py 10                      # 10 profiles Indonesia
+  python3 combo_unique.py 10 --country Singapore  # 10 profiles Singapore
+  python3 combo_unique.py 5 --country Malaysia    # 5 profiles Malaysia
+  python3 combo_unique.py 10 --json               # JSON output
+  python3 combo_unique.py 10 --amd-json           # AMD pipeline JSON files
 """
 
 import json, random, sys, re
@@ -16,8 +17,6 @@ from datetime import datetime
 SKILL_DIR = Path.home() / ".hermes/skills/social-media/linkedin-open-to-work"
 SCRIPTS_DIR = SKILL_DIR / "scripts"
 DATA_DIR = SKILL_DIR / "data"
-ADDRESS_FILE = DATA_DIR / "address.txt"
-CITIES_UNIV_FILE = DATA_DIR / "cities_univ.json"
 GPU_USE_CASES_FILE = Path.home() / ".hermes/data/gpu_use_cases.json"
 SENT_FILE = DATA_DIR / "sent_profiles.json"
 AMD_SENT_FILE = Path.home() / ".hermes/skills/social-media/amd-register-sugab/data/sent_amd_profiles.json"
@@ -26,12 +25,31 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 from search_li import do_refresh, get_fresh_profiles, mark_sent, normalise_url, extract_name_from_url
 
 
-def load_addresses():
-    """Load address database."""
-    if not ADDRESS_FILE.exists():
+def get_country_data_files(country):
+    """Get data file paths for a specific country."""
+    # Country code mapping for file naming
+    cc_map = {"Singapore": "sg", "Malaysia": "my", "Indonesia": ""}
+    cc = cc_map.get(country, country.lower().replace(' ', '_'))
+    
+    if not cc or country == "Indonesia":
+        return {
+            'address': DATA_DIR / "address.txt",
+            'cities_univ': DATA_DIR / "cities_univ.json",
+        }
+    return {
+        'address': DATA_DIR / f"address_{cc}.txt",
+        'cities_univ': DATA_DIR / f"cities_univ_{cc}.json",
+    }
+
+
+def load_addresses(country="Indonesia"):
+    """Load address database for a specific country."""
+    files = get_country_data_files(country)
+    addr_file = files['address']
+    if not addr_file.exists():
         return []
     addresses = []
-    for line in open(ADDRESS_FILE):
+    for line in open(addr_file):
         line = line.strip()
         if not line or line.startswith('#'):
             continue
@@ -47,11 +65,13 @@ def load_addresses():
     return addresses
 
 
-def load_cities_univ():
-    """Load city -> university mapping."""
-    if not CITIES_UNIV_FILE.exists():
+def load_cities_univ(country="Indonesia"):
+    """Load city -> university mapping for a specific country."""
+    files = get_country_data_files(country)
+    cu_file = files['cities_univ']
+    if not cu_file.exists():
         return {}
-    return json.load(open(CITIES_UNIV_FILE))
+    return json.load(open(cu_file))
 
 
 def load_gpu_use_cases():
@@ -69,42 +89,36 @@ def load_gpu_use_cases():
             "I am learning about autonomous AI agents in my university program and need GPU resources.",
             "I need GPU resources for my academic projects in the AI field to improve my grades.",
         ]
-    return json.load(open(GPU_USE_CASES_FILE))
+    raw = json.load(open(GPU_USE_CASES_FILE))
+    # Handle both list and {"use_cases": [...]} formats
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, dict):
+        return raw.get('use_cases', raw.get('templates', []))
+    return []
 
 
-def match_university(city, cities_univ):
+def match_university(city, cities_univ, country="Indonesia"):
     """Match city with university."""
     city_lower = city.lower()
     for key, unis in cities_univ.items():
         if key.lower() == city_lower:
             return random.choice(unis)
-    # Fallback: Jakarta universities
-    return random.choice(["Universitas Negeri Jakarta", "Universitas Mercu Buana", "Universitas Trisakti"])
+    # Country-appropriate fallback
+    fallbacks = {
+        "Singapore": ["National University of Singapore", "Nanyang Technological University"],
+        "Malaysia": ["Universiti Malaya", "Universiti Kebangsaan Malaysia"],
+        "Indonesia": ["Universitas Negeri Jakarta", "Universitas Mercu Buana", "Universitas Trisakti"],
+    }
+    fb = fallbacks.get(country, fallbacks["Indonesia"])
+    return random.choice(fb)
 
 
-def get_all_sent_urls():
-    """Get all sent URLs from both LI and AMD trackers."""
-    sent = set()
-    for f in [SENT_FILE, AMD_SENT_FILE]:
-        if f.exists():
-            data = json.load(open(f))
-            for p in data:
-                url = p.get('url', '')
-                if url:
-                    sent.add(normalise_url(url))
-                # Also track by name
-                name = p.get('name', '')
-                if name:
-                    sent.add(name.lower().strip())
-    return sent
-
-
-def format_profile(profile, addresses, cities_univ, gpu_cases):
+def format_profile(profile, addresses, cities_univ, gpu_cases, country="Indonesia", domain="ubsi.biz.id"):
     """Format a single profile with address + university."""
     url = profile.get('url', '')
     name = profile.get('name', extract_name_from_url(url))
 
-    # Pick random address
     if addresses:
         addr = random.choice(addresses)
         city = addr['city']
@@ -113,18 +127,18 @@ def format_profile(profile, addresses, cities_univ, gpu_cases):
         province = addr['province']
         zipcode = addr['zip']
     else:
-        city = 'Jakarta'
-        address1 = 'Jl. Sudirman No. 1'
-        address2 = ''
-        province = 'DKI Jakarta'
-        zipcode = '10220'
+        city = 'Jakarta' if country == 'Indonesia' else 'Singapore'
+        address1 = 'Jl. Sudirman No. 1' if country == 'Indonesia' else '1 Rochor Canal Road'
+        address2 = '' if country == 'Indonesia' else 'Rochor'
+        province = 'DKI Jakarta' if country == 'Indonesia' else 'Singapore'
+        zipcode = '10220' if country == 'Indonesia' else '188504'
 
-    university = match_university(city, cities_univ)
+    university = match_university(city, cities_univ, country)
     gpu_case = random.choice(gpu_cases)
 
     # Build email: firstnamelastname@domain (lowercase, no dots)
     name_clean = re.sub(r'[^a-zA-Z]', '', name).lower()
-    email = f"{name_clean}@ubsi.biz.id"
+    email = f"{name_clean}@{domain}"
 
     return {
         'name': name,
@@ -139,7 +153,8 @@ def format_profile(profile, addresses, cities_univ, gpu_cases):
         'zip': zipcode,
         'university': university,
         'gpu_case': gpu_case,
-        'phone': f"628{random.randint(100000000, 999999999)}",
+        'phone': f"628{random.randint(100000000, 999999999)}" if country == "Indonesia" else f"65{random.randint(10000000, 99999999)}",
+        'country': country,
     }
 
 
@@ -148,6 +163,7 @@ def print_profile(p):
     print(f"Name       : {p['name']}")
     print(f"LinkedIn   : {p['url']}")
     print(f"Email      : {p['email']}")
+    print(f"Country    : {p['country']}")
     print(f"City       : {p['city']}")
     print(f"Province   : {p['province']}")
     print(f"University : {p['university']}")
@@ -168,6 +184,16 @@ def main():
     domain = 'ubsi.biz.id'
     password = 'PasswordKuat!1'
     is_send = '--json-send' in args
+    country = 'Indonesia'
+
+    # Parse --country
+    if '--country' in args:
+        try:
+            idx = args.index('--country')
+            country = args[idx + 1]
+            del args[idx:idx+2]
+        except:
+            pass
 
     # Parse count
     for a in args:
@@ -191,25 +217,25 @@ def main():
             pass
 
     # Always search fresh — no stock/cache-first
-    print(f"[combo_unique] Searching fresh profiles...")
-    do_refresh(target_count=max(count * 3, 30))
+    print(f"[combo_unique] Searching fresh profiles for {country}...")
+    do_refresh(target_count=max(count * 3, 30), country=country)
 
     # Get fresh profiles (exclude already sent)
-    profiles = get_fresh_profiles(count=count, exclude_sent=True)
+    profiles = get_fresh_profiles(count=count, exclude_sent=True, country=country)
 
     if not profiles:
         print("[combo_unique] Still no fresh profiles found.")
         sys.exit(1)
 
-    # Load data
-    addresses = load_addresses()
-    cities_univ = load_cities_univ()
+    # Load country-specific data
+    addresses = load_addresses(country)
+    cities_univ = load_cities_univ(country)
     gpu_cases = load_gpu_use_cases()
 
     # Format
     results = []
     for profile in profiles[:count]:
-        p = format_profile(profile, addresses, cities_univ, gpu_cases)
+        p = format_profile(profile, addresses, cities_univ, gpu_cases, country=country, domain=domain)
         results.append(p)
 
     # Output
@@ -221,7 +247,7 @@ def main():
         for i, p in enumerate(results, 1):
             safe_name = re.sub(r'[^a-zA-Z0-9]', '_', p['name'])
             filename = f"amd-register-{safe_name}.json"
-            
+
             amd_json_data = {
                 "profiles": [{
                     "name": "AMD Create Account",
@@ -260,7 +286,7 @@ def main():
                                 {"label": "Company Name", "value": p['university']},
                                 {"label": "Address 1", "value": p['address1']},
                                 {"label": "Address 2", "value": p['address2']},
-                                {"label": "Location / Country", "value": "Indonesia"},
+                                {"label": "Location / Country", "value": p['country']},
                                 {"label": "City", "value": p['city']},
                                 {"label": "State/Province", "value": p['province']},
                                 {"label": "Postal Code", "value": p['zip']},
@@ -275,11 +301,11 @@ def main():
                     ]
                 }]
             }
-            
-            with open(amd_dir / filename, 'w') as f:
-                json.dump(amd_json_data, f, indent=2, ensure_ascii=False)
+
+            amd_dir.mkdir(parents=True, exist_ok=True)
+            json.dump(amd_json_data, open(amd_dir / filename, 'w'), indent=2, ensure_ascii=False)
             print(f"Generated: {filename} ({p['name']})")
-        
+
         # Update AMD sent tracking
         amd_sent_file = amd_dir / "data" / "sent_amd_profiles.json"
         amd_sent = []
@@ -293,7 +319,7 @@ def main():
             })
         amd_sent_file.parent.mkdir(parents=True, exist_ok=True)
         json.dump(amd_sent, open(amd_sent_file, 'w'), indent=2)
-        
+
         print(f"\n[combo_unique] {len(results)} AMD JSON files generated.")
 
     else:
