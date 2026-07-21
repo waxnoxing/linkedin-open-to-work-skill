@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""
-amd_register_json.py — Generate AMD Developer Cloud registration JSON from LinkedIn profiles
+"""amd_register_json.py — Generate AMD Developer Cloud registration JSON from LinkedIn profiles
 
 Usage:
-  python3 amd_register_json.py                # 1 random profile
-  python3 amd_register_json.py 5              # N profiles
-  python3 amd_register_json.py 1 --url "https://..."  # specific profile
-  python3 amd_register_json.py --list         # list available profiles
+  python3 amd_register_json.py                          # 1 profile Indonesia
+  python3 amd_register_json.py 5                        # N profiles Indonesia
+  python3 amd_register_json.py 5 --country Singapore    # N profiles Singapore
+  python3 amd_register_json.py 1 --url "https://..."    # specific profile
+  python3 amd_register_json.py --list                   # list available
   python3 amd_register_json.py 3 --domain ubsi.biz.id --password "MyPass!1"
 """
 
-import json, random, sys, re, os
+import json, random, sys, re
 from pathlib import Path
 from datetime import datetime
 
@@ -23,23 +23,23 @@ GPU_USE_CASES_FILE = Path.home() / ".hermes/data/gpu_use_cases.json"
 
 sys.path.insert(0, str(SCRIPTS_DIR))
 from search_li import do_refresh, get_fresh_profiles, normalise_url, extract_name_from_url
-from combo_unique import load_addresses, load_cities_univ, load_gpu_use_cases, match_university, get_all_sent_urls
+
+# Reuse combo_unique's country-aware helpers
+from combo_unique import load_addresses, load_cities_univ, load_gpu_use_cases, match_university
 
 
-def generate_amd_json(profile, domain="sugabdemy.app", password="PasswordKuat!1"):
+def generate_amd_json(profile, domain="sugabdemy.app", password="PasswordKuat!1", country="Indonesia"):
     """Generate 3-step AMD registration JSON for a profile."""
     name = profile.get('name', '')
     url = profile.get('url', '')
-    first_name = name.split()[0] if name.split() else name
-    last_name = ' '.join(name.split()[1:]) if len(name.split()) > 1 else ''
 
     # Clean email local part
     email_local = re.sub(r'[^a-zA-Z]', '', name).lower()
     email = f"{email_local}@{domain}"
 
-    # Address
-    addresses = load_addresses()
-    cities_univ = load_cities_univ()
+    # Country-specific data
+    addresses = load_addresses(country)
+    cities_univ = load_cities_univ(country)
     gpu_cases = load_gpu_use_cases()
 
     if addresses:
@@ -50,15 +50,23 @@ def generate_amd_json(profile, domain="sugabdemy.app", password="PasswordKuat!1"
         province = addr['province']
         zipcode = addr['zip']
     else:
-        city = 'Jakarta'
-        address1 = 'Jl. Sudirman No. 1'
-        address2 = ''
-        province = 'DKI Jakarta'
-        zipcode = '10220'
+        city = 'Jakarta' if country == 'Indonesia' else 'Singapore'
+        address1 = 'Jl. Sudirman No. 1' if country == 'Indonesia' else '1 Rochor Canal Road'
+        address2 = '' if country == 'Indonesia' else 'Rochor'
+        province = 'DKI Jakarta' if country == 'Indonesia' else 'Singapore'
+        zipcode = '10220' if country == 'Indonesia' else '188504'
 
-    university = match_university(city, cities_univ)
+    university = match_university(city, cities_univ, country)
     gpu_case = random.choice(gpu_cases)
-    phone = f"628{random.randint(100000000, 999999999)}"
+
+    phone = (
+        f"628{random.randint(100000000, 999999999)}"
+        if country == "Indonesia"
+        else f"65{random.randint(10000000, 99999999)}"
+    )
+
+    first_name = name.split()[0] if name.split() else name
+    last_name = ' '.join(name.split()[1:]) if len(name.split()) > 1 else ''
 
     return {
         "profiles": [{
@@ -72,7 +80,7 @@ def generate_amd_json(profile, domain="sugabdemy.app", password="PasswordKuat!1"
                         {"label": "Last Name", "value": last_name},
                         {"label": "E-mail", "value": email},
                         {"label": "Preferred Language", "value": "English"},
-                        {"label": "Location", "value": "Indonesia"},
+                        {"label": "Location", "value": country},
                     ]
                 },
                 {
@@ -111,6 +119,7 @@ def main():
     domain = "sugabdemy.app"
     password = "PasswordKuat!1"
     specific_url = None
+    country = "Indonesia"
 
     # Parse args
     i = 0
@@ -126,8 +135,11 @@ def main():
         elif args[i] == '--password' and i + 1 < len(args):
             password = args[i + 1]
             i += 1
+        elif args[i] == '--country' and i + 1 < len(args):
+            country = args[i + 1]
+            i += 1
         elif args[i] == '--list':
-            profiles = get_fresh_profiles(count=50, exclude_sent=False)
+            profiles = get_fresh_profiles(count=50, exclude_sent=False, country=country)
             for p in profiles:
                 print(f"{p['name']} | {p['url']}")
             sys.exit(0)
@@ -137,11 +149,11 @@ def main():
     if specific_url:
         profiles = [{'name': extract_name_from_url(specific_url), 'url': specific_url}]
     else:
-        profiles = get_fresh_profiles(count=count, exclude_sent=True)
+        profiles = get_fresh_profiles(count=count, exclude_sent=True, country=country)
         if not profiles:
-            print("[amd] No profiles in cache, searching...")
-            do_refresh(target_count=max(count * 3, 30))
-            profiles = get_fresh_profiles(count=count, exclude_sent=True)
+            print(f"[amd] No profiles in cache for {country}, searching...")
+            do_refresh(target_count=max(count * 3, 30), country=country)
+            profiles = get_fresh_profiles(count=count, exclude_sent=True, country=country)
 
     if not profiles:
         print("[amd] No profiles available. All engines may be blocked.")
@@ -152,12 +164,12 @@ def main():
     generated = []
 
     for profile in profiles[:count]:
-        amd_json = generate_amd_json(profile, domain=domain, password=password)
+        amd_json = generate_amd_json(profile, domain=domain, password=password, country=country)
         name = profile.get('name', 'unknown').replace(' ', '_')
-        filename = f"amd-register-{name}.json"
+        safe_name = re.sub(r'[^a-zA-Z0-9_]', '', name)
+        filename = f"amd-register-{safe_name}.json"
         filepath = output_dir / filename
 
-        # Use json.dump to avoid phone masking
         json.dump(amd_json, open(filepath, 'w'), indent=2, ensure_ascii=False)
         generated.append(filepath)
         print(f"Generated: {filename} ({profile.get('name', '')})")
